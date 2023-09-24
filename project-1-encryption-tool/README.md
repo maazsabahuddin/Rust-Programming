@@ -54,3 +54,21 @@ Output Samples (5 points): Provides output samples demonstrating successful file
 
  
 A total score of 90-100 points is considered excellent, 80-89 points is considered good, 70-79 points is considered satisfactory, and below 70 points is considered unsatisfactory.
+
+
+
+
+
+
+
+## SOLUTION
+
+# Generate public and private key pairs
+cargo run -- generate mypubkey.pem myprivkey.pem
+
+# Read the plaintext file content and encrypt it using the public key and generate a ciphertext.bin file which is encrypted.
+cargo run -- encrypt plaintext.txt ciphertext.bin mypubkey.pem
+
+# Decrypt the ciphertext.bin file using the private key and save the decrypted text to decrypted.txt.
+cargo run -- decrypt ciphertext.bin decrypted.txt myprivkey.pem
+
