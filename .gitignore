@@ -5,5 +5,6 @@ project-1-encryption-tool/ciphertext.bin
 project-1-encryption-tool/encrypted.bin
 project-1-encryption-tool/decrypted.txt
 project-1-encryption-tool/plaintext.txt
+project-1-encryption-tool/images/
 project-1-encryption-tool/private_key.pem
 project-1-encryption-tool/public_key.pem

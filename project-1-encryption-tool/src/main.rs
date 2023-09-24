@@ -1,11 +1,11 @@
-extern crate clap;
+// Import external modules 
+use openssl::rsa::{Rsa, Padding}; // openssl encryption and decryption crate usability
+use std::error::Error; // Handling erros
+use std::fs::File; // Used to play with file handling
+use std::io; // This library is input output handling
+use std::io::{Read, Write}; // This module used for file read and write
 
-use openssl::rsa::{Rsa, Padding};
-use std::error::Error;
-use std::fs::File;
-use std::io;
-use std::io::{Read, Write};
-
+// Struct will hold the configuration parameters.
 struct Config {
     pub_key_file: String,
     priv_key_file: String,
@@ -14,6 +14,7 @@ struct Config {
     output_file: String,
 }
 
+// Implementation of stuct parameters that will be used through the project.
 impl Config {
     fn new() -> Self {
         Self {
@@ -27,11 +28,15 @@ impl Config {
 }
 
 fn generate_key_pair(config: &Config) -> Result<(), Box<dyn Error>> {
+
+    // This will generate an RSA key value pair
     let rsa = Rsa::generate(config.key_size)?;
 
+    // The below code will convert the keys into pem format so that encryption decryption takes place
     let pub_key_pem = rsa.public_key_to_pem()?;
     let priv_key_pem = rsa.private_key_to_pem()?;
 
+    // Create the file and store the pub pvt key into them..
     let mut pub_key_file = File::create(&config.pub_key_file)?;
     pub_key_file.write_all(&pub_key_pem)?;
 
@@ -43,20 +48,27 @@ fn generate_key_pair(config: &Config) -> Result<(), Box<dyn Error>> {
 }
 
 fn encrypt(config: &Config) -> Result<(), Box<dyn Error>> {
+
+    // The below lines will open a file with the specific path provided by the user
     let mut pub_key_file = File::open(&config.pub_key_file)?;
     let mut pub_key_data = Vec::new();
+    // Read the file after opening it.
     pub_key_file.read_to_end(&mut pub_key_data)?;
 
+    // Parse the public key
     let pub_key = Rsa::public_key_from_pem(&pub_key_data)?;
 
+    // Read the data inside the file    
     let mut input_file = File::open(&config.input_file)?;
 
     let mut plaintext = Vec::new();
     input_file.read_to_end(&mut plaintext)?;
 
+    // Preparte the data and encrypt it
     let mut ciphertext = vec![0; pub_key.size() as usize];
     pub_key.public_encrypt(&plaintext, &mut ciphertext, Padding::PKCS1)?;
 
+    // Create or open a file `encrypted.bin` to store the encrypted text and write the encrypted text to it.
     let mut output_file = File::create(&config.output_file)?;
     output_file.write_all(&ciphertext)?;
 
@@ -65,20 +77,27 @@ fn encrypt(config: &Config) -> Result<(), Box<dyn Error>> {
 }
 
 fn decrypt(config: &Config) -> Result<(), Box<dyn Error>> {
+
+    // Read the private key from a file.
+
     let mut priv_key_file = File::open(&config.priv_key_file)?;
     let mut priv_key_data = Vec::new();
     priv_key_file.read_to_end(&mut priv_key_data)?;
 
+    // Parse the private key.
     let priv_key = Rsa::private_key_from_pem(&priv_key_data)?;
 
+    // Read the encrypted text data from an input file.
     let mut input_file = File::open(&config.input_file)?;
 
     let mut ciphertext = Vec::new();
     input_file.read_to_end(&mut ciphertext)?;
 
+    // Prepare a buffer for the encrypted text and decrypt the data.
     let mut plaintext = vec![0; priv_key.size() as usize];
     let len = priv_key.private_decrypt(&ciphertext, &mut plaintext, Padding::PKCS1)?;
 
+    // Create or open a file `decrypted.txt` to store the plaintext and write the plaintext to it.
     let mut output_file = File::create(&config.output_file)?;
     output_file.write_all(&plaintext[..len])?;
 
@@ -89,6 +108,8 @@ fn decrypt(config: &Config) -> Result<(), Box<dyn Error>> {
 fn main() -> Result<(), Box<dyn Error>> {
     let mut config = Config::new();
 
+    // loop for user choices.
+    // The loop will execute until the user press the QUIT option.
     loop {
         println!("\n\n\tChoose an option:");
         println!("\n\t1. Press `G` to generate key pairs");
@@ -96,15 +117,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("\t3. Press `D` to decrypt");
         println!("\t4. Press `Q` to quit");
 
+        // Read the user's choice.
         let mut input = String::new();
         println!("\n\tEnter your choice: ");
         io::stdin().read_line(&mut input)?;
 
+        // Switch case in RUST - processing the user's choice.
         match input.trim() {
             "1" | "g" | "G" => {
                 generate_key_pair(&config)?;
             }
             "2" | "e" | "E" => {
+                // Get input and output file paths from the user.
                 println!("\n\tEnter the input file path that needs to be encrypted:");
                 let mut input_path = String::new();
                 io::stdin().read_line(&mut input_path)?;
