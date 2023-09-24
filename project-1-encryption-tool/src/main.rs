@@ -47,7 +47,32 @@ fn generate_key_pair(config: &Config) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn get_valid_file_path(prompt: &str, check_existence: bool) -> String {
+    // This function will check the existence of the file and prompt the user to enter a valid file path.
+    // Will only check the existence if the check_existence flag is set to true.
+    loop {
+        let mut path = String::new();
+        println!("\n\t{}", prompt);
+        io::stdin().read_line(&mut path).expect("Failed to read input");
+        let path = path.trim();
+        
+        if !path.is_empty() {
+            if !check_existence || std::fs::metadata(&path).is_ok() {
+                return path.to_string();
+            } else {
+                println!("\t====== File not found. Please enter a valid file path. =====");
+            }
+        } else {
+            println!("\n\tInvalid path. Please enter a valid path.");
+        }
+    }
+}
+
 fn encrypt(config: &Config) -> Result<(), Box<dyn Error>> {
+
+    // Get input and output file paths from the user.
+    let input_file = get_valid_file_path("\n\tPlease input the path of the file that needs to be encrypted:", true);
+    let output_file = get_valid_file_path("\n\tEnter the personalized file name for your encrypted data:", false);
 
     // The below lines will open a file with the specific path provided by the user
     let mut pub_key_file = File::open(&config.pub_key_file)?;
@@ -59,7 +84,7 @@ fn encrypt(config: &Config) -> Result<(), Box<dyn Error>> {
     let pub_key = Rsa::public_key_from_pem(&pub_key_data)?;
 
     // Read the data inside the file    
-    let mut input_file = File::open(&config.input_file)?;
+    let mut input_file = File::open(&input_file)?;
 
     let mut plaintext = Vec::new();
     input_file.read_to_end(&mut plaintext)?;
@@ -69,7 +94,7 @@ fn encrypt(config: &Config) -> Result<(), Box<dyn Error>> {
     pub_key.public_encrypt(&plaintext, &mut ciphertext, Padding::PKCS1)?;
 
     // Create or open a file `encrypted.bin` to store the encrypted text and write the encrypted text to it.
-    let mut output_file = File::create(&config.output_file)?;
+    let mut output_file = File::create(&output_file)?;
     output_file.write_all(&ciphertext)?;
 
     println!("\n\tEncryption complete.");
@@ -78,8 +103,11 @@ fn encrypt(config: &Config) -> Result<(), Box<dyn Error>> {
 
 fn decrypt(config: &Config) -> Result<(), Box<dyn Error>> {
 
-    // Read the private key from a file.
+    // Get input and output file paths from the user.
+    let input_file = get_valid_file_path("\n\tPlease input the path for encrypted file:", true);
+    let output_file = get_valid_file_path("\n\tPlease input the output file path name to see the decrypted data:", false);
 
+    // Read the private key from a file.
     let mut priv_key_file = File::open(&config.priv_key_file)?;
     let mut priv_key_data = Vec::new();
     priv_key_file.read_to_end(&mut priv_key_data)?;
@@ -88,7 +116,7 @@ fn decrypt(config: &Config) -> Result<(), Box<dyn Error>> {
     let priv_key = Rsa::private_key_from_pem(&priv_key_data)?;
 
     // Read the encrypted text data from an input file.
-    let mut input_file = File::open(&config.input_file)?;
+    let mut input_file = File::open(&input_file)?;
 
     let mut ciphertext = Vec::new();
     input_file.read_to_end(&mut ciphertext)?;
@@ -98,12 +126,13 @@ fn decrypt(config: &Config) -> Result<(), Box<dyn Error>> {
     let len = priv_key.private_decrypt(&ciphertext, &mut plaintext, Padding::PKCS1)?;
 
     // Create or open a file `decrypted.txt` to store the plaintext and write the plaintext to it.
-    let mut output_file = File::create(&config.output_file)?;
+    let mut output_file = File::create(&output_file)?;
     output_file.write_all(&plaintext[..len])?;
 
     println!("\n\tDecryption complete.");
     Ok(())
 }
+
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut config = Config::new();
@@ -128,32 +157,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                 generate_key_pair(&config)?;
             }
             "2" | "e" | "E" => {
-                // Get input and output file paths from the user.
-                println!("\n\tEnter the input file path that needs to be encrypted:");
-                let mut input_path = String::new();
-                io::stdin().read_line(&mut input_path)?;
-
-                println!("\n\tEnter the personalized file name for your encrypted data:");
-                let mut output_path = String::new();
-                io::stdin().read_line(&mut output_path)?;
-
-                config.input_file = input_path.trim().to_string();
-                config.output_file = output_path.trim().to_string();
-
+                config.input_file.clear(); // Clear previous input file path.
+                config.output_file.clear(); // Clear previous output file path.
                 encrypt(&config)?;
             }
             "3" | "d" | "D" => {
-                println!("\n\tEnter the input file path for decryption:");
-                let mut input_path = String::new();
-                io::stdin().read_line(&mut input_path)?;
-
-                println!("\n\tEnter the output file path name for decrypted data:");
-                let mut output_path = String::new();
-                io::stdin().read_line(&mut output_path)?;
-
-                config.input_file = input_path.trim().to_string();
-                config.output_file = output_path.trim().to_string();
-
+                config.input_file.clear(); // Clear previous input file path.
+                config.output_file.clear(); // Clear previous output file path.
                 decrypt(&config)?;
             }
             "4" | "q" | "Q" => {
