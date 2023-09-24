@@ -38,7 +38,7 @@ fn generate_key_pair(config: &Config) -> Result<(), Box<dyn Error>> {
     let mut priv_key_file = File::create(&config.priv_key_file)?;
     priv_key_file.write_all(&priv_key_pem)?;
 
-    println!("Key pair generated successfully.");
+    println!("\n\tKey pair generated successfully.");
     Ok(())
 }
 
@@ -60,7 +60,7 @@ fn encrypt(config: &Config) -> Result<(), Box<dyn Error>> {
     let mut output_file = File::create(&config.output_file)?;
     output_file.write_all(&ciphertext)?;
 
-    println!("Encryption complete.");
+    println!("\n\tEncryption complete.");
     Ok(())
 }
 
@@ -82,7 +82,7 @@ fn decrypt(config: &Config) -> Result<(), Box<dyn Error>> {
     let mut output_file = File::create(&config.output_file)?;
     output_file.write_all(&plaintext[..len])?;
 
-    println!("Decryption complete.");
+    println!("\n\tDecryption complete.");
     Ok(())
 }
 
@@ -90,24 +90,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut config = Config::new();
 
     loop {
-        println!("Press 1 to generate public-private key pair");
-        println!("Press 2 to encrypt data");
-        println!("Press 3 to decrypt data");
-        println!("Press 4 to QUIT");
+        println!("\n\n\tChoose an option:");
+        println!("\n\t1. Press `G` to generate key pairs");
+        println!("\t2. Press `E` to encrypt");
+        println!("\t3. Press `D` to decrypt");
+        println!("\t4. Press `Q` to quit");
 
         let mut input = String::new();
+        println!("\n\tEnter your choice: ");
         io::stdin().read_line(&mut input)?;
 
         match input.trim() {
-            "1" => {
+            "1" | "g" | "G" => {
                 generate_key_pair(&config)?;
             }
-            "2" => {
-                println!("Enter the input file path:");
+            "2" | "e" | "E" => {
+                println!("\n\tEnter the input file path that needs to be encrypted:");
                 let mut input_path = String::new();
                 io::stdin().read_line(&mut input_path)?;
 
-                println!("Enter the output file path for encryption:");
+                println!("\n\tEnter the personalized file name for your encrypted data:");
                 let mut output_path = String::new();
                 io::stdin().read_line(&mut output_path)?;
 
@@ -116,12 +118,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 encrypt(&config)?;
             }
-            "3" => {
-                println!("Enter the input file path for decryption:");
+            "3" | "d" | "D" => {
+                println!("\n\tEnter the input file path for decryption:");
                 let mut input_path = String::new();
                 io::stdin().read_line(&mut input_path)?;
 
-                println!("Enter the output file path for decrypted data:");
+                println!("\n\tEnter the output file path name for decrypted data:");
                 let mut output_path = String::new();
                 io::stdin().read_line(&mut output_path)?;
 
@@ -130,12 +132,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 decrypt(&config)?;
             }
-            "4" => {
-                println!("Exiting the program.");
+            "4" | "q" | "Q" => {
+                println!("\n\tExiting the program.");
                 break;
             }
             _ => {
-                println!("Invalid option. Please enter a valid option (1, 2, 3, or 4).");
+                println!("\n\tInvalid option. Please enter a valid option (`G`, `E`, `D`, `Q`).");
             }
         }
     }
