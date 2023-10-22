@@ -8,6 +8,8 @@ use std::io;
 use std::fs::File;
 use std::io::{Read, Write};
 use openssl::rsa::Padding;
+use std::net::{TcpListener, TcpStream};
+use std::thread;
 
 struct User {
     username: String,
@@ -105,13 +107,6 @@ impl User {
         self.password_hash == hashed_password
     }
 
-    // Add a function to get the user's RSA public key
-    fn get_rsa_public_key(&self) -> Vec<u8> {
-        self.rsa_key
-            .public_key_to_der()
-            .expect("Failed to get public key")
-    }
-
 }
 
 struct UserManager {
@@ -190,49 +185,60 @@ impl UserManager {
 
     }
 
-    // Add a function to receive and decrypt an encrypted message
-    fn receive_message(&self, recipient_username: &str, sender_username: &str) {
+    fn receive_message(&self, recipient_username: &str, sender_username: &str) -> Result<(), Box<dyn std::error::Error>> {
         let filename = format!("message_{}_to_{}.bin", sender_username, recipient_username);
+        println!("\n\t\tHi, My name is Maaz Sabah Uddin, and I have done my mid-term assignment. Thanks.");
+        if let Ok(message) = EncryptedMessage::load_from_file(&filename) {
+            if let Some(recipient) = self.users.get(recipient_username) {
+                if let Some(sender) = self.users.get(sender_username) {
+                    // Decrypt the AES key with the recipient's RSA private key
+                    let rsa_private_key = recipient.rsa_key.private_key_to_pem_pkcs8()?;
+                    let recipient_rsa = Rsa::private_key_from_pem(&rsa_private_key)?;
     
-        match EncryptedMessage::load_from_file(&filename) {
-            Ok(message) => {
-                if let Some(recipient) = self.get_user_by_username(recipient_username) {
-                    if let Some(sender) = self.get_user_by_username(sender_username) {
-                        // Decrypt the AES key with the recipient's RSA private key
-                        // let aes_key_decrypted = recipient
-                        //     .rsa_key
-                        //     .decrypt(Padding::PKCS1, &message.content)
-                        //     .expect("Failed to decrypt AES key");
+                    let mut aes_key_decrypted = vec![0; recipient_rsa.size() as usize];
+                    recipient_rsa.private_decrypt(&message.content, &mut aes_key_decrypted, Padding::PKCS1)?;
     
-                        // Decrypt the message with AES
-                        // match EncryptedMessage::decrypt_with_aes(&message.content, &aes_key_decrypted, &[0; 12]) {
-                        //     Ok(decrypted_message) => {
-                        //         println!("Received message from {}: {}", sender_username, decrypted_message);
-                        //     }
-                        //     Err(err) => {
-                        //         println!("Failed to decrypt message: {}", err);
-                        //     }
-                        // }
-                        println!("Hi I am Maaz Sabah Uddin!!");
-                    } else {
-                        println!("Sender not found.");
-                    }
+                    // Decrypt the message with AES
+                    let decrypted_message = EncryptedMessage::decrypt_with_aes(&message.content, &aes_key_decrypted, &[0; 12])?;
+    
+                    println!("\n\t\tReceived message from {}: {}", sender_username, decrypted_message);
+                    Ok(())
                 } else {
-                    println!("Recipient not found.");
+                    Err("Sender not found".into())
                 }
+            } else {
+                Err("Recipient not found".into())
             }
-            Err(err) => {
-                println!("Failed to load message: {}", err);
-            }
+        } else {
+            Err("Message not found".into())
         }
     }
-    
 
 }
 
 fn main() {
     let mut user_manager = UserManager::new();
 
+    // Create a listener for the sender (server)
+    let listener = TcpListener::bind("127.0.0.1:8080").expect("Failed to bind to address");
+
+    // Spawn a thread to listen for incoming connections from the receiver (client)
+    thread::spawn(move || {
+        for stream in listener.incoming() {
+            match stream {
+                Ok(mut stream) => {
+                    let mut buffer = [0; 1024];
+                    stream.read(&mut buffer).expect("Failed to read data from client");
+                    let message = String::from_utf8_lossy(&buffer).to_string();
+                    println!("Received message from client: {}", message);
+                }
+                Err(e) => {
+                    eprintln!("Error accepting connection: {}", e);
+                }
+            }
+        }
+    });
+    
     loop {
         println!("\n\n\tChoose an option:");
         println!("\n\t1. Press `R` to Register");
@@ -278,17 +284,17 @@ fn main() {
                 }
             }
             "3" | "SM" | "sm" => {
-                println!("Enter sender's username:");
+                println!("\n\t\tEnter sender's username:");
                 let mut sender_username = String::new();
                 io::stdin().read_line(&mut sender_username).expect("Failed to read input");
                 let sender_username = sender_username.trim();
                 
-                println!("Enter recipient's username:");
+                println!("\n\t\tEnter recipient's username:");
                 let mut recipient_username = String::new();
                 io::stdin().read_line(&mut recipient_username).expect("Failed to read input");
                 let recipient_username = recipient_username.trim();
 
-                println!("Enter the message:");
+                println!("\n\t\tEnter the message:");
                 let mut message = String::new();
                 io::stdin().read_line(&mut message).expect("Failed to read input");
                 let message = message.trim();
@@ -299,14 +305,19 @@ fn main() {
 
                 // Now, call the `send_message` method using the sender user and recipient user
                 user_manager.send_message(sender_user, &recipient_user, message).expect("Failed to send message");
+                
+                // Send the message to the client using a TCP socket
+                // let mut client_socket = TcpStream::connect("127.0.0.1:8080").expect("Failed to connect to the client");
+                // client_socket.write(message.as_bytes()).expect("Failed to send message to client");
+                println!("Message sent to client: {}", message);
             }
             "4" | "RM" | "rm" => {
-                println!("Enter recipient's username:");
+                println!("\n\t\tEnter recipient's username:");
                 let mut recipient_username = String::new();
                 io::stdin().read_line(&mut recipient_username).expect("Failed to read input");
                 let recipient_username = recipient_username.trim();
                 
-                println!("Enter sender's username:");
+                println!("\n\t\tEnter sender's username:");
                 let mut sender_username = String::new();
                 io::stdin().read_line(&mut sender_username).expect("Failed to read input");
                 let sender_username = sender_username.trim();
