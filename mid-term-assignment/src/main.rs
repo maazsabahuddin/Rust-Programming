@@ -1,12 +1,46 @@
 use openssl::sha::Sha256;
 use openssl::rand::rand_bytes;
 use std::collections::HashMap;
+use openssl::symm::{encrypt, decrypt, Cipher};
 use std::io;
 
 struct User {
     username: String,
     password_hash: Vec<u8>,
     salt: Vec<u8>,
+}
+
+struct EncryptedMessage {
+    sender: String,
+    recipient: String,
+    content: Vec<u8>,
+}
+
+impl EncryptedMessage {
+    fn encrypt_with_aes(message: &str, key: &[u8], iv: &[u8]) -> Vec<u8> {
+        let cipher = Cipher::aes_256_gcm(); // You can use other AES modes if needed
+        let encrypted_message = encrypt(
+            cipher,
+            key,        // AES key
+            Some(iv),   // IV
+            message.as_bytes(),
+        )
+        .expect("AES encryption failed");
+        encrypted_message
+    }
+
+    fn decrypt_with_aes(encrypted_message: &[u8], key: &[u8], iv: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
+        let cipher = Cipher::aes_256_gcm(); // You should use the same AES mode used for encryption
+        let decrypted_bytes = decrypt(
+            cipher,
+            key,
+            Some(iv),
+            encrypted_message,
+        )?;
+        
+        String::from_utf8(decrypted_bytes)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    }
 }
 
 impl User {
