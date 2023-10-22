@@ -9,7 +9,6 @@ use std::fs::File;
 use std::io::{Read, Write};
 use openssl::rsa::Padding;
 
-
 struct User {
     username: String,
     password_hash: Vec<u8>,
@@ -200,20 +199,21 @@ impl UserManager {
                 if let Some(recipient) = self.get_user_by_username(recipient_username) {
                     if let Some(sender) = self.get_user_by_username(sender_username) {
                         // Decrypt the AES key with the recipient's RSA private key
-                        let aes_key_decrypted = recipient
-                            .rsa_key
-                            .decrypt(Padding::PKCS1, &message.content)
-                            .expect("Failed to decrypt AES key");
+                        // let aes_key_decrypted = recipient
+                        //     .rsa_key
+                        //     .decrypt(Padding::PKCS1, &message.content)
+                        //     .expect("Failed to decrypt AES key");
     
                         // Decrypt the message with AES
-                        match EncryptedMessage::decrypt_with_aes(&message.content, &aes_key_decrypted, &[0; 12]) {
-                            Ok(decrypted_message) => {
-                                println!("Received message from {}: {}", sender_username, decrypted_message);
-                            }
-                            Err(err) => {
-                                println!("Failed to decrypt message: {}", err);
-                            }
-                        }
+                        // match EncryptedMessage::decrypt_with_aes(&message.content, &aes_key_decrypted, &[0; 12]) {
+                        //     Ok(decrypted_message) => {
+                        //         println!("Received message from {}: {}", sender_username, decrypted_message);
+                        //     }
+                        //     Err(err) => {
+                        //         println!("Failed to decrypt message: {}", err);
+                        //     }
+                        // }
+                        println!("Hi I am Maaz Sabah Uddin!!");
                     } else {
                         println!("Sender not found.");
                     }
@@ -237,8 +237,8 @@ fn main() {
         println!("\n\n\tChoose an option:");
         println!("\n\t1. Press `R` to Register");
         println!("\t2. Press `L` to Login");
-        println!("\t3. Press `S` to Send Message");
-        println!("\t4. Press `R` to Receive Message");
+        println!("\t3. Press `SM` to Send Message");
+        println!("\t4. Press `RM` to Receive Message");
         println!("\t5. Press `Q` to Quit");
 
 
@@ -277,7 +277,7 @@ fn main() {
                     println!("\tLogin failed. Please check your username and password.");
                 }
             }
-            "3" | "S" | "s" => {
+            "3" | "SM" | "sm" => {
                 println!("Enter sender's username:");
                 let mut sender_username = String::new();
                 io::stdin().read_line(&mut sender_username).expect("Failed to read input");
@@ -300,7 +300,7 @@ fn main() {
                 // Now, call the `send_message` method using the sender user and recipient user
                 user_manager.send_message(sender_user, &recipient_user, message).expect("Failed to send message");
             }
-            "4" | "R" | "r" => {
+            "4" | "RM" | "rm" => {
                 println!("Enter recipient's username:");
                 let mut recipient_username = String::new();
                 io::stdin().read_line(&mut recipient_username).expect("Failed to read input");
