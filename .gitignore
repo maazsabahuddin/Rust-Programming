@@ -1,6 +1,8 @@
 hello-world/
 csc1010_w2p1/
 mid-term-assignment/target/
+port_scanner/target/
+worm-ftp/target/
 project-1-encryption-tool/target/
 project-1-encryption-tool/ciphertext.bin
 project-1-encryption-tool/encrypted.bin
@@ -13,4 +15,5 @@ project-1-encryption-tool.rar
 project-2/target/
 project-2/Project 02 - Advanced Scripting.docx
 project-2/Project Requirement w4_p2.pdf
-project-2.rar
+mid-term-assignment.rar
+worm-ftp.rar
