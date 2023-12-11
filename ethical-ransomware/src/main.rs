@@ -16,11 +16,6 @@ use std::time::Duration;
 
 // Main function - entry point of the program
 fn main() {
-    for _ in 0..5 {
-        println!("\n\n\tThis project is Ethical Ransomware and can encrypt your overall drive and ask for ransom. Please only encrypt that folder 
-        which is not important to you. Otherwise, you will lose access and have to pay ransom to get the decrypt passphrase.");
-        thread::sleep(Duration::from_secs(2.5));
-    }
 
     // Parse the command line arguments
     let args: Vec<String> = env::args().collect();
@@ -62,6 +57,12 @@ fn main() {
     // Handle 'encrypt' subcommand
     if let Some(matches) = matches.subcommand_matches("encrypt") {
 
+        for _ in 0..5 {
+            println!("\n\n\tWARNING: This project is Ethical Ransomware and can encrypt your overall drive and ask for ransom. Please only encrypt that folder 
+            which is not important to you. Otherwise, you will lose access and have to pay ransom to get the decrypt passphrase.");
+            thread::sleep(Duration::from_secs(2));
+        }
+    
         let folder = matches.value_of("FOLDER").unwrap();
         let passphrase = matches.value_of("PASSPHRASE").unwrap();
 
@@ -72,21 +73,32 @@ fn main() {
         if user_input.trim().eq_ignore_ascii_case("yes") {   
             if let (Some(folder), Some(passphrase)) = (matches.value_of("FOLDER"), matches.value_of("PASSPHRASE")) {
                 match encrypt_folder(folder, passphrase) {
-                    Ok(_) => println!("Folder encrypted successfully!"),
-                    Err(e) => eprintln!("Error encrypting folder: {}", e),
+                    Ok(_) => println!("\n\n\tFolder encrypted successfully!"),
+                    Err(e) => eprintln!("\n\tError encrypting folder: {}", e),
                 }
             }
         } else {
-            println!("Encryption cancelled. Exiting program.");
+            println!("\n\tEncryption cancelled. Exiting program.");
             process::exit(0);
         }
         
     // Handle 'decrypt' subcommand
     } else if let Some(matches) = matches.subcommand_matches("decrypt") {
+
+        for _ in 0..5 {
+            println!("\n\n\tWARNING: You are about to decrypt a folder. Ensure you have the correct passphrase, as entering an incorrect passphrase 
+            could result in permanent data loss or corruption. Use this tool responsibly and only decrypt folders for which you have explicit 
+            permission and the correct decryption key. Misuse of this tool can lead to serious consequences.");
+            thread::sleep(Duration::from_secs(2));
+
+        }
         if let (Some(folder), Some(passphrase)) = (matches.value_of("FOLDER"), matches.value_of("PASSPHRASE")) {
             match decrypt_folder(folder, passphrase) {
-                Ok(_) => println!("Folder decrypted successfully!"),
-                Err(e) => eprintln!("Error decrypting folder: {}", e),
+                Ok(_) => println!("\n\n\tFolder decrypted successfully!"),
+                Err(e) => {
+                    eprintln!("\n\tError decrypting folder: {}", e);
+                    eprintln!("\n\tWARNING: One of the reason could be Invalid Passphrase.");
+                }
             }
         }
     }
@@ -103,6 +115,8 @@ fn encrypt_folder(path: &str, passphrase: &str) -> io::Result<()> {
         if path.is_dir() {
             continue;
         }
+
+        print!("\n\tEncrypting file: {}", path.display());
 
         // Read the file's contents
         let mut file = File::open(path)?;
@@ -140,6 +154,8 @@ fn decrypt_folder(path: &str, passphrase: &str) -> io::Result<()> {
         if path.is_dir() {
             continue;
         }
+
+        print!("\n\tDecrypting file: {}", path.display());
 
         // Read the encrypted file's contents
         let mut file = File::open(path)?;
