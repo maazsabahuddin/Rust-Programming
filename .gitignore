@@ -7,6 +7,7 @@ worm-ftp/target/
 project-5-enc-dec-folder/target/
 project-1-encryption-tool/target/
 project-2/target/
+ethical-ransomware/target/
 
 # Subdirectories
 project-1-encryption-tool/ciphertext.bin
@@ -16,8 +17,8 @@ project-1-encryption-tool/plaintext.txt
 project-1-encryption-tool/images/
 project-1-encryption-tool/private_key.pem
 project-1-encryption-tool/public_key.pem
-project-1-encryption-tool.rar
 project-2/Project 02 - Advanced Scripting.docx
 project-2/Project Requirement w4_p2.pdf
 mid-term-assignment.rar
 worm-ftp.rar
+project-1-encryption-tool.rar

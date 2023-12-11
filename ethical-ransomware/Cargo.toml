@@ -1,0 +1,13 @@
+[package]
+name = "ethical-ransomware"
+version = "1.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = "2.33.3" # For parsing CLI arguments
+age = "0.7" # For encryption and decryption
+walkdir = "2.3" # For walking through directory contents
+secrecy = "0.8"
+
