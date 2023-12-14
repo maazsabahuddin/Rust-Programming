@@ -14,9 +14,122 @@ use std::process;
 use std::thread;
 use std::time::Duration;
 
+// Define a struct to handle folder processing
+struct FolderProcessor {
+    path: String,
+    passphrase: String,
+}
+
+impl FolderProcessor {
+    // Constructor for FolderProcessor
+    fn new(path: &str, passphrase: &str) -> FolderProcessor {
+        FolderProcessor {
+            path: path.to_string(),
+            passphrase: passphrase.to_string(),
+        }
+    }
+
+    // Method to encrypt a folder
+    fn encrypt(&self) -> io::Result<()> {
+        // Iterate over each file in the directory
+        for entry in WalkDir::new(&self.path) {
+            let entry = entry?;
+            let path = entry.path();
+
+            // Skip directories, only encrypt files
+            if path.is_dir() {
+                continue;
+            }
+
+            print!("\n\tEncrypting file: {}", path.display());
+
+            // Read the file's contents
+            let mut file = File::open(path)?;
+            let mut contents = Vec::new();
+            file.read_to_end(&mut contents)?;
+
+            // Encrypt the contents using the provided passphrase
+            let encryptor = Encryptor::with_user_passphrase(Secret::new(self.passphrase.to_string()));
+            let mut encrypted_writer = vec![];
+            {
+                let mut writer = match encryptor.wrap_output(&mut encrypted_writer) {
+                    Ok(w) => w,
+                    Err(e) => return Err(io::Error::new(io::ErrorKind::Other, e)),
+                };
+                writer.write_all(&contents)?;
+                writer.finish()?;
+            }
+
+            // Replace the file with its encrypted version
+            let mut file = File::create(path)?;
+            file.write_all(&encrypted_writer)?;
+        }
+
+        Ok(())
+    }
+
+
+    // Method to decrypt a folder
+    fn decrypt(&self) -> io::Result<()> {
+        // Iterate over each file in the directory
+        for entry in WalkDir::new(&self.path) {
+            let entry = entry?;
+            let path = entry.path();
+
+            // Skip directories, only decrypt files
+            if path.is_dir() {
+                continue;
+            }
+
+            print!("\n\tDecrypting file: {}", path.display());
+
+            // Read the encrypted file's contents
+            let mut file = File::open(path)?;
+            let mut encrypted_contents = Vec::new();
+            file.read_to_end(&mut encrypted_contents)?;
+
+            // Attempt to create a decryptor
+            let decryptor_result = Decryptor::new(&encrypted_contents[..]);
+
+            let mut decrypted_contents = Vec::new();
+
+            // Handle the result of decryptor creation
+            match decryptor_result {
+                Ok(decryptor) => {
+                    // Handle different types of decryptors, focusing on passphrase decryptors
+                    match decryptor {
+                        Decryptor::Passphrase(d) => {
+                            // Attempt to decrypt with the provided passphrase
+                            let reader_result = d.decrypt(&Secret::new(self.passphrase.to_string()), None);
+                            match reader_result {
+                                Ok(mut reader) => {
+                                    // Read and store the decrypted contents
+                                    reader.read_to_end(&mut decrypted_contents)?;
+                                },
+                                // Handle decryption errors
+                                Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Decryption failed: {}", e))),
+                            }
+                        },
+                        // Handle unsupported decryptor types
+                        _ => return Err(io::Error::new(io::ErrorKind::Other, "Unsupported decryptor type")),
+                    }
+                },
+                // Handle errors in creating the decryptor
+                Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Failed to create decryptor: {}", e))),
+            };
+
+            // Replace the encrypted file with its decrypted version
+            let mut file = File::create(path)?;
+            file.write_all(&decrypted_contents)?;
+        }
+
+        Ok(())
+    }
+
+}
+
 // Main function - entry point of the program
 fn main() {
-
     // Parse the command line arguments
     let args: Vec<String> = env::args().collect();
 
@@ -30,7 +143,6 @@ fn main() {
         .version("1.3") // Set version
         .author("Maaz Sabah Uddin") // Set author
         .about("Encrypts and Decrypts folders") // Program description
-        // Define 'encrypt' subcommand with its arguments
         .subcommand(SubCommand::with_name("encrypt")
             .about("Encrypts a folder")
             .arg(Arg::with_name("FOLDER")
@@ -41,7 +153,6 @@ fn main() {
                 .help("Sets the passphrase for encryption")
                 .required(true)
                 .index(2)))
-        // Define 'decrypt' subcommand with its arguments
         .subcommand(SubCommand::with_name("decrypt")
             .about("Decrypts a folder")
             .arg(Arg::with_name("FOLDER")
@@ -62,7 +173,7 @@ fn main() {
             which is not important to you. Otherwise, you will lose access and have to pay ransom to get the decrypt passphrase.");
             thread::sleep(Duration::from_secs(2));
         }
-    
+
         let folder = matches.value_of("FOLDER").unwrap();
         let passphrase = matches.value_of("PASSPHRASE").unwrap();
 
@@ -70,12 +181,11 @@ fn main() {
         let mut user_input = String::new();
         io::stdin().read_line(&mut user_input).expect("Failed to read line");
 
-        if user_input.trim().eq_ignore_ascii_case("yes") {   
-            if let (Some(folder), Some(passphrase)) = (matches.value_of("FOLDER"), matches.value_of("PASSPHRASE")) {
-                match encrypt_folder(folder, passphrase) {
-                    Ok(_) => println!("\n\n\tFolder encrypted successfully!"),
-                    Err(e) => eprintln!("\n\tError encrypting folder: {}", e),
-                }
+        if user_input.trim().eq_ignore_ascii_case("yes") {
+            let processor = FolderProcessor::new(folder, passphrase);
+            match processor.encrypt() {
+                Ok(_) => println!("\n\n\tFolder encrypted successfully!"),
+                Err(e) => eprintln!("\n\tError encrypting folder: {}", e),
             }
         } else {
             println!("\n\tEncryption cancelled. Exiting program.");
@@ -90,112 +200,14 @@ fn main() {
             could result in permanent data loss or corruption. Use this tool responsibly and only decrypt folders for which you have explicit 
             permission and the correct decryption key. Misuse of this tool can lead to serious consequences.");
             thread::sleep(Duration::from_secs(2));
-
         }
+
         if let (Some(folder), Some(passphrase)) = (matches.value_of("FOLDER"), matches.value_of("PASSPHRASE")) {
-            match decrypt_folder(folder, passphrase) {
+            let processor = FolderProcessor::new(folder, passphrase);
+            match processor.decrypt() {
                 Ok(_) => println!("\n\n\tFolder decrypted successfully!"),
-                Err(e) => {
-                    eprintln!("\n\tError decrypting folder: {}", e);
-                    eprintln!("\n\tWARNING: One of the reason could be Invalid Passphrase.");
-                }
+                Err(e) => eprintln!("\n\tError decrypting folder: {}", e),
             }
         }
     }
-}
-
-// Function to encrypt a folder
-fn encrypt_folder(path: &str, passphrase: &str) -> io::Result<()> {
-    // Iterate over each file in the directory
-    for entry in WalkDir::new(path) {
-        let entry = entry?;
-        let path = entry.path();
-
-        // Skip directories, only encrypt files
-        if path.is_dir() {
-            continue;
-        }
-
-        print!("\n\tEncrypting file: {}", path.display());
-
-        // Read the file's contents
-        let mut file = File::open(path)?;
-        let mut contents = Vec::new();
-        file.read_to_end(&mut contents)?;
-
-        // Encrypt the contents using the provided passphrase
-        let encryptor = Encryptor::with_user_passphrase(Secret::new(passphrase.to_string()));
-        let mut encrypted_writer = vec![];
-        {
-            let mut writer = match encryptor.wrap_output(&mut encrypted_writer) {
-                Ok(w) => w,
-                Err(e) => return Err(io::Error::new(io::ErrorKind::Other, e)),
-            };
-            writer.write_all(&contents)?;
-            writer.finish()?;
-        }
-
-        // Replace the file with its encrypted version
-        let mut file = File::create(path)?;
-        file.write_all(&encrypted_writer)?;
-    }
-
-    Ok(())
-}
-
-// Function to decrypt a folder
-fn decrypt_folder(path: &str, passphrase: &str) -> io::Result<()> {
-    // Iterate over each file in the directory
-    for entry in WalkDir::new(path) {
-        let entry = entry?;
-        let path = entry.path();
-
-        // Skip directories, only decrypt files
-        if path.is_dir() {
-            continue;
-        }
-
-        print!("\n\tDecrypting file: {}", path.display());
-
-        // Read the encrypted file's contents
-        let mut file = File::open(path)?;
-        let mut encrypted_contents = Vec::new();
-        file.read_to_end(&mut encrypted_contents)?;
-
-        // Attempt to create a decryptor
-        let decryptor_result = Decryptor::new(&encrypted_contents[..]);
-
-        let mut decrypted_contents = Vec::new();
-
-        // Handle the result of decryptor creation
-        match decryptor_result {
-            Ok(decryptor) => {
-                // Handle different types of decryptors, focusing on passphrase decryptors
-                match decryptor {
-                    Decryptor::Passphrase(d) => {
-                        // Attempt to decrypt with the provided passphrase
-                        let reader_result = d.decrypt(&Secret::new(passphrase.to_string()), None);
-                        match reader_result {
-                            Ok(mut reader) => {
-                                // Read and store the decrypted contents
-                                reader.read_to_end(&mut decrypted_contents)?;
-                            },
-                            // Handle decryption errors
-                            Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Decryption failed: {}", e))),
-                        }
-                    },
-                    // Handle unsupported decryptor types
-                    _ => return Err(io::Error::new(io::ErrorKind::Other, "Unsupported decryptor type")),
-                }
-            },
-            // Handle errors in creating the decryptor
-            Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Failed to create decryptor: {}", e))),
-        };
-
-        // Replace the encrypted file with its decrypted version
-        let mut file = File::create(path)?;
-        file.write_all(&decrypted_contents)?;
-    }
-
-    Ok(())
 }

@@ -8,6 +8,7 @@ project-5-enc-dec-folder/target/
 project-1-encryption-tool/target/
 project-2/target/
 ethical-ransomware/target/
+ethical-ransomware/local-folder-for-encryption/
 
 # Subdirectories
 project-1-encryption-tool/ciphertext.bin
